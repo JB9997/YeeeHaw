@@ -1,0 +1,278 @@
+﻿@page "/WerkzeugCrud"
+@using Werkzeug.Models
+@using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
+
+<PageTitle>Werkzeug CRUD</PageTitle>
+
+<h3>Werkzeug CRUD (1 Seite)</h3>
+
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <p class="text-info">@statusMessage</p>
+}
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="DoSelectAll">Select all</button>
+</div>
+
+@if (werkzeuge == null)
+{
+    <p>Daten noch nicht geladen</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>WerkzeugId</th>
+                <th>Bezeichnung</th>
+                <th>Kategorie</th>
+                <th>Hersteller</th>
+                <th>Zustand</th>
+                <th>Preis</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var w in werkzeuge)
+            {
+                <tr>
+                    <td>@w.WerkzeugId</td>
+                    <td>@w.Bezeichnung</td>
+                    <td>@w.Kategorie</td>
+                    <td>@w.Hersteller</td>
+                    <td>@w.Zustand</td>
+                    <td>@w.Preis</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<hr />
+
+<h4>Insert</h4>
+
+<div class="mb-2">
+    <label>Bezeichnung</label>
+    <input class="form-control" @bind="newWerkzeug.Bezeichnung" />
+</div>
+
+<div class="mb-2">
+    <label>Kategorie</label>
+    <input class="form-control" @bind="newWerkzeug.Kategorie" />
+</div>
+
+<div class="mb-2">
+    <label>Hersteller</label>
+    <input class="form-control" @bind="newWerkzeug.Hersteller" />
+</div>
+
+<div class="mb-2">
+    <label>Zustand</label>
+    <input class="form-control" @bind="newWerkzeug.Zustand" placeholder="Neu / Gut / Ok / Defekt" />
+</div>
+
+<div class="mb-2">
+    <label>Preis</label>
+    <input class="form-control" type="number" step="0.01" @bind="newWerkzeug.Preis" />
+</div>
+
+<button class="btn btn-success" @onclick="DoAdd">Hinzufügen</button>
+
+<hr />
+
+<h4>Update</h4>
+
+<div class="mb-2">
+    <label>WerkzeugId (laden)</label>
+    <input class="form-control" type="number" @bind="editId" />
+</div>
+
+<button class="btn btn-primary mb-2" @onclick="DoLoadForUpdate">Laden</button>
+
+@if (editWerkzeug == null)
+{
+    <p>Kein Werkzeug geladen.</p>
+}
+else
+{
+    <div class="mb-2">
+        <label>ID (nur anzeigen)</label>
+        <input class="form-control" value="@editWerkzeug.WerkzeugId" disabled />
+    </div>
+
+    <div class="mb-2">
+        <label>Bezeichnung</label>
+        <input class="form-control" @bind="editWerkzeug.Bezeichnung" />
+    </div>
+
+    <div class="mb-2">
+        <label>Kategorie</label>
+        <input class="form-control" @bind="editWerkzeug.Kategorie" />
+    </div>
+
+    <div class="mb-2">
+        <label>Hersteller</label>
+        <input class="form-control" @bind="editWerkzeug.Hersteller" />
+    </div>
+
+    <div class="mb-2">
+        <label>Zustand</label>
+        <input class="form-control" @bind="editWerkzeug.Zustand" />
+    </div>
+
+    <div class="mb-2">
+        <label>Preis</label>
+        <input class="form-control" type="number" step="0.01" @bind="editWerkzeug.Preis" />
+    </div>
+
+    <button class="btn btn-warning" @onclick="DoUpdate">Änderungen speichern</button>
+}
+
+<hr />
+
+<h4>Remove</h4>
+
+<div class="mb-2">
+    <label>WerkzeugId (löschen)</label>
+    <input class="form-control" type="number" @bind="removeId" />
+</div>
+
+<button class="btn btn-danger" @onclick="DoRemove">Löschen</button>
+
+@code {
+    // wie immer: DbContext direkt instanziert
+    MyDbContext myDbContext = new MyDbContext();
+
+    // SELECT
+    List<Werkzeug>? werkzeuge;
+
+    // INSERT
+    Werkzeug newWerkzeug = new Werkzeug()
+    {
+        Bezeichnung = "",
+        Kategorie = "",
+        Hersteller = "",
+        Zustand = "Gut",
+        Preis = 0
+    };
+
+    // UPDATE
+    int? editId;
+    Werkzeug? editWerkzeug;
+
+    // REMOVE
+    int? removeId;
+
+    string? statusMessage;
+
+    private void DoSelectAll()
+    {
+        statusMessage = string.Empty;
+        werkzeuge = myDbContext.Set<Werkzeug>().ToList();
+        statusMessage = "Werkzeuge geladen.";
+    }
+
+    private void DoAdd()
+    {
+        statusMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(newWerkzeug.Bezeichnung) ||
+            string.IsNullOrWhiteSpace(newWerkzeug.Kategorie) ||
+            string.IsNullOrWhiteSpace(newWerkzeug.Hersteller) ||
+            string.IsNullOrWhiteSpace(newWerkzeug.Zustand))
+        {
+            statusMessage = "Bitte Bezeichnung, Kategorie, Hersteller und Zustand ausfüllen.";
+            return;
+        }
+
+        myDbContext.Set<Werkzeug>().Add(newWerkzeug);
+        myDbContext.SaveChanges();
+
+        statusMessage = $"Werkzeug gespeichert (ID: {newWerkzeug.WerkzeugId}).";
+
+        newWerkzeug = new Werkzeug()
+        {
+            Bezeichnung = "",
+            Kategorie = "",
+            Hersteller = "",
+            Zustand = "Gut",
+            Preis = 0
+        };
+
+        werkzeuge = myDbContext.Set<Werkzeug>().ToList();
+    }
+
+    private void DoLoadForUpdate()
+    {
+        statusMessage = string.Empty;
+        editWerkzeug = null;
+
+        if (editId == null)
+        {
+            statusMessage = "Bitte eine gültige WerkzeugId eingeben.";
+            return;
+        }
+
+        editWerkzeug = myDbContext.Set<Werkzeug>()
+            .FirstOrDefault(x => x.WerkzeugId == editId.Value);
+
+        statusMessage = editWerkzeug == null
+            ? $"Kein Werkzeug mit ID {editId.Value} gefunden."
+            : $"Werkzeug mit ID {editId.Value} geladen.";
+    }
+
+    private void DoUpdate()
+    {
+        statusMessage = string.Empty;
+
+        if (editWerkzeug == null)
+        {
+            statusMessage = "Kein Werkzeug geladen.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(editWerkzeug.Bezeichnung) ||
+            string.IsNullOrWhiteSpace(editWerkzeug.Kategorie) ||
+            string.IsNullOrWhiteSpace(editWerkzeug.Hersteller) ||
+            string.IsNullOrWhiteSpace(editWerkzeug.Zustand))
+        {
+            statusMessage = "Bitte Bezeichnung, Kategorie, Hersteller und Zustand ausfüllen.";
+            return;
+        }
+
+        myDbContext.SaveChanges();
+
+        statusMessage = $"Werkzeug mit ID {editWerkzeug.WerkzeugId} aktualisiert.";
+        werkzeuge = myDbContext.Set<Werkzeug>().ToList();
+    }
+
+    private void DoRemove()
+    {
+        statusMessage = string.Empty;
+
+        if (removeId == null)
+        {
+            statusMessage = "Bitte eine gültige WerkzeugId eingeben.";
+            return;
+        }
+
+        var w = myDbContext.Set<Werkzeug>()
+            .FirstOrDefault(x => x.WerkzeugId == removeId.Value);
+
+        if (w == null)
+        {
+            statusMessage = $"Kein Werkzeug mit ID {removeId.Value} gefunden.";
+            return;
+        }
+
+        myDbContext.Remove(w);
+        myDbContext.SaveChanges();
+
+        statusMessage = $"Werkzeug mit ID {removeId.Value} gelöscht.";
+        werkzeuge = myDbContext.Set<Werkzeug>().ToList();
+        editWerkzeug = null;
+    }
+}
+
